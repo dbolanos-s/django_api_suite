@@ -1,18 +1,39 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from firebase_admin import db
 from datetime import datetime
+
+from firebase_admin import db
+from firebase_admin.exceptions import NotFoundError
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 
 class LandingAPI(APIView):
     """API para gestionar datos de Landing en Firebase Realtime Database."""
+
     collection_name = "landing"
 
+    def _get_collection(self):
+        try:
+            ref = db.reference(self.collection_name)
+            data = ref.get()
+        except NotFoundError:
+            return []
+
+        if data is None:
+            return []
+        if isinstance(data, list):
+            return data
+        return [data]
+
     def get(self, request):
-        ref = db.reference(self.collection_name)
-        data = ref.get()
-        return Response(data or [], status=status.HTTP_200_OK)
+        try:
+            data = self._get_collection()
+            return Response(data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     def post(self, request):
         try:
@@ -47,6 +68,11 @@ class LandingAPI(APIView):
             ref.set(existing_data)
             return Response(new_item, status=status.HTTP_201_CREATED)
 
+        except NotFoundError:
+            ref = db.reference(self.collection_name)
+            ref.set([])
+            return self.post(request)
+
         except Exception as e:
             return Response(
                 {"error": str(e)},
@@ -56,25 +82,36 @@ class LandingAPI(APIView):
 
 class LandingDetailAPI(APIView):
     """API para operaciones en un elemento específico de landing."""
+
     collection_name = "landing"
 
     def _load_data(self):
-        ref = db.reference(self.collection_name)
-        data = ref.get()
+        try:
+            ref = db.reference(self.collection_name)
+            data = ref.get()
+        except NotFoundError:
+            return []
+
         if data is None:
             return []
         return data if isinstance(data, list) else [data]
 
     def get(self, request, landing_id):
-        data = self._load_data()
-        for item in data:
-            if isinstance(item, dict) and item.get("id") == landing_id:
-                return Response(item, status=status.HTTP_200_OK)
+        try:
+            data = self._load_data()
+            for item in data:
+                if isinstance(item, dict) and item.get("id") == landing_id:
+                    return Response(item, status=status.HTTP_200_OK)
 
-        return Response(
-            {"error": f"Landing con ID {landing_id} no encontrado"},
-            status=status.HTTP_404_NOT_FOUND,
-        )
+            return Response(
+                {"error": f"Landing con ID {landing_id} no encontrado"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     def put(self, request, landing_id):
         try:
