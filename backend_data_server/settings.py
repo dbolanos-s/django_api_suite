@@ -132,5 +132,5 @@ STATICFILES_DIRS = [
 FIREBASE_CREDENTIALS_PATH = credentials.Certificate("secrets/landing-key.json")
 
 firebase_admin.initialize_app(FIREBASE_CREDENTIALS_PATH, {
-    'databaseURL': 'https://landing-d6f4f4-default-rtdb.firebaseio.com/'
+    'databaseURL': 'https://landing-2de01-default-rtdb.firebaseio.com/'
 })
