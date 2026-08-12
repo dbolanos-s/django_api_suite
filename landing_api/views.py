@@ -1,161 +1,92 @@
-from datetime import datetime
-
-from firebase_admin import db
-from firebase_admin.exceptions import NotFoundError
+import requests
+from django.conf import settings
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+COLLECTION = "favoritos"
+
+
+def _collection_url():
+    return f"{settings.FIREBASE_DATABASE_URL}/{COLLECTION}.json"
+
+
+def _item_url(item_id):
+    return f"{settings.FIREBASE_DATABASE_URL}/{COLLECTION}/{item_id}.json"
+
 
 class LandingAPI(APIView):
-    """API para gestionar datos de Landing en Firebase Realtime Database."""
-
-    collection_name = "favoritos"
-
-    def _get_collection(self):
-        try:
-            ref = db.reference(self.collection_name)
-            data = ref.get()
-        except NotFoundError:
-            return []
-
-        if data is None:
-            return []
-        if isinstance(data, list):
-            return data
-        return [data]
-
     def get(self, request):
-        try:
-            data = self._get_collection()
-            return Response(data, status=status.HTTP_200_OK)
-        except Exception as e:
+        response = requests.get(_collection_url())
+        if response.status_code != 200:
             return Response(
-                {"error": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                {"error": "No se pudo leer la base de datos"},
+                status=status.HTTP_502_BAD_GATEWAY,
             )
+
+        data = response.json() or {}
+        if isinstance(data, dict):
+            items = [{"id": key, **value} for key, value in data.items()]
+        else:
+            items = []
+        return Response(items, status=status.HTTP_200_OK)
 
     def post(self, request):
-        try:
-            payload = request.data
-            if "titulo" not in payload:
-                return Response(
-                    {"error": "El campo 'titulo' es obligatorio"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            ref = db.reference(self.collection_name)
-            existing_data = ref.get()
-
-            if existing_data is None:
-                existing_data = []
-            elif not isinstance(existing_data, list):
-                existing_data = [existing_data]
-
-            ids = [item.get("id", 0) for item in existing_data if isinstance(item, dict)]
-            new_id = max(ids) + 1 if ids else 1
-
-            new_item = {
-                "id": new_id,
-                "titulo": payload.get("titulo"),
-                "descripcion": payload.get("descripcion", ""),
-                "url": payload.get("url", ""),
-                "creado_en": datetime.now().isoformat(),
-                "actualizado_en": datetime.now().isoformat(),
-            }
-
-            existing_data.append(new_item)
-            ref.set(existing_data)
-            return Response(new_item, status=status.HTTP_201_CREATED)
-
-        except NotFoundError:
-            ref = db.reference(self.collection_name)
-            ref.set([])
-            return self.post(request)
-
-        except Exception as e:
+        payload = request.data
+        if "nombre" not in payload or "favorito" not in payload:
             return Response(
-                {"error": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                {"error": "Los campos 'nombre' y 'favorito' son obligatorios"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
+
+        response = requests.post(_collection_url(), json=payload)
+        if response.status_code != 200:
+            return Response(
+                {"error": "No se pudo guardar el registro"},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        new_id = response.json().get("name")
+        return Response({"id": new_id, **payload}, status=status.HTTP_201_CREATED)
 
 
 class LandingDetailAPI(APIView):
-    """API para operaciones en un elemento específico de landing."""
+    def _find(self, item_id):
+        return requests.get(_item_url(item_id)).json()
 
-    collection_name = "favoritos"
-
-    def _load_data(self):
-        try:
-            ref = db.reference(self.collection_name)
-            data = ref.get()
-        except NotFoundError:
-            return []
-
+    def get(self, request, item_id):
+        data = self._find(item_id)
         if data is None:
-            return []
-        return data if isinstance(data, list) else [data]
-
-    def get(self, request, landing_id):
-        try:
-            data = self._load_data()
-            for item in data:
-                if isinstance(item, dict) and item.get("id") == landing_id:
-                    return Response(item, status=status.HTTP_200_OK)
-
             return Response(
-                {"error": f"Landing con ID {landing_id} no encontrado"},
+                {"error": f"No existe el registro {item_id}"},
                 status=status.HTTP_404_NOT_FOUND,
             )
-        except Exception as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        return Response({"id": item_id, **data}, status=status.HTTP_200_OK)
 
-    def put(self, request, landing_id):
-        try:
-            data = self._load_data()
-            for item in data:
-                if isinstance(item, dict) and item.get("id") == landing_id:
-                    item["titulo"] = request.data.get("titulo", item.get("titulo"))
-                    item["descripcion"] = request.data.get("descripcion", item.get("descripcion"))
-                    item["url"] = request.data.get("url", item.get("url"))
-                    item["actualizado_en"] = datetime.now().isoformat()
-                    db.reference(self.collection_name).set(data)
-                    return Response(item, status=status.HTTP_200_OK)
-
+    def put(self, request, item_id):
+        if self._find(item_id) is None:
             return Response(
-                {"error": f"Landing con ID {landing_id} no encontrado"},
+                {"error": f"No existe el registro {item_id}"},
                 status=status.HTTP_404_NOT_FOUND,
             )
+        requests.put(_item_url(item_id), json=request.data)
+        return Response({"id": item_id, **request.data}, status=status.HTTP_200_OK)
 
-        except Exception as e:
+    def patch(self, request, item_id):
+        current = self._find(item_id)
+        if current is None:
             return Response(
-                {"error": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-
-    def delete(self, request, landing_id):
-        try:
-            data = self._load_data()
-            for index, item in enumerate(data):
-                if isinstance(item, dict) and item.get("id") == landing_id:
-                    data.pop(index)
-                    ref = db.reference(self.collection_name)
-                    if data:
-                        ref.set(data)
-                    else:
-                        ref.delete()
-                    return Response(status=status.HTTP_204_NO_CONTENT)
-
-            return Response(
-                {"error": f"Landing con ID {landing_id} no encontrado"},
+                {"error": f"No existe el registro {item_id}"},
                 status=status.HTTP_404_NOT_FOUND,
             )
+        requests.patch(_item_url(item_id), json=request.data)
+        return Response({"id": item_id, **current, **request.data}, status=status.HTTP_200_OK)
 
-        except Exception as e:
+    def delete(self, request, item_id):
+        if self._find(item_id) is None:
             return Response(
-                {"error": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                {"error": f"No existe el registro {item_id}"},
+                status=status.HTTP_404_NOT_FOUND,
             )
+        requests.delete(_item_url(item_id))
+        return Response(status=status.HTTP_204_NO_CONTENT)
