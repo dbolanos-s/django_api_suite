@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 class LandingAPI(APIView):
     """API para gestionar datos de Landing en Firebase Realtime Database."""
 
-    collection_name = "landing"
+    collection_name = "favoritos"
 
     def _get_collection(self):
         try:
@@ -83,7 +83,7 @@ class LandingAPI(APIView):
 class LandingDetailAPI(APIView):
     """API para operaciones en un elemento específico de landing."""
 
-    collection_name = "landing"
+    collection_name = "favoritos"
 
     def _load_data(self):
         try:
