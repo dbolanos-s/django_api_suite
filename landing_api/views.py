@@ -1,92 +1,99 @@
-import requests
-from django.conf import settings
+from datetime import datetime
+
+from firebase_admin import db
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-COLLECTION = "favoritos"
-
-
-def _collection_url():
-    return f"{settings.FIREBASE_DATABASE_URL}/{COLLECTION}.json"
-
-
-def _item_url(item_id):
-    return f"{settings.FIREBASE_DATABASE_URL}/{COLLECTION}/{item_id}.json"
-
 
 class LandingAPI(APIView):
-    def get(self, request):
-        response = requests.get(_collection_url())
-        if response.status_code != 200:
-            return Response(
-                {"error": "No se pudo leer la base de datos"},
-                status=status.HTTP_502_BAD_GATEWAY,
-            )
+    name = "Landing API"
+    collection_name = "favoritos"
 
-        data = response.json() or {}
-        if isinstance(data, dict):
-            items = [{"id": key, **value} for key, value in data.items()]
-        else:
-            items = []
-        return Response(items, status=status.HTTP_200_OK)
+    def get(self, request):
+        # Referencia a la colección
+        ref = db.reference(f'{self.collection_name}')
+
+        # get: Obtiene todos los elementos de la colección
+        data = ref.get()
+
+        # Devuelve un arreglo JSON
+        return Response(data, status=status.HTTP_200_OK)
 
     def post(self, request):
-        payload = request.data
-        if "nombre" not in payload or "favorito" not in payload:
+        data = request.data.copy()
+
+        if not data:
             return Response(
-                {"error": "Los campos 'nombre' y 'favorito' son obligatorios"},
+                {"error": "El cuerpo de la solicitud no puede estar vacío."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        response = requests.post(_collection_url(), json=payload)
-        if response.status_code != 200:
-            return Response(
-                {"error": "No se pudo guardar el registro"},
-                status=status.HTTP_502_BAD_GATEWAY,
-            )
+        # Referencia a la colección
+        ref = db.reference(f'{self.collection_name}')
 
-        new_id = response.json().get("name")
-        return Response({"id": new_id, **payload}, status=status.HTTP_201_CREATED)
+        # Fecha y hora del servidor: dd/mm/yyyy, hh:mm:ss a. m./p. m.
+        current_time = datetime.now()
+        custom_format = current_time.strftime("%d/%m/%Y, %I:%M:%S %p").lower() \
+            .replace('am', 'a. m.').replace('pm', 'p. m.')
+        data.update({"timestamp": custom_format})
+
+        # push: Guarda el objeto en la colección
+        new_resource = ref.push(data)
+
+        # Devuelve el id del objeto guardado
+        return Response({"id": new_resource.key}, status=status.HTTP_201_CREATED)
 
 
 class LandingDetailAPI(APIView):
-    def _find(self, item_id):
-        return requests.get(_item_url(item_id)).json()
+    """Opcional: CRUD por elemento sobre la misma colección."""
+
+    name = "Landing API - Item"
+    collection_name = "favoritos"
+
+    def _reference(self, item_id):
+        return db.reference(f'{self.collection_name}/{item_id}')
 
     def get(self, request, item_id):
-        data = self._find(item_id)
+        data = self._reference(item_id).get()
         if data is None:
             return Response(
-                {"error": f"No existe el registro {item_id}"},
+                {"error": f"No existe el registro {item_id}."},
                 status=status.HTTP_404_NOT_FOUND,
             )
         return Response({"id": item_id, **data}, status=status.HTTP_200_OK)
 
     def put(self, request, item_id):
-        if self._find(item_id) is None:
+        ref = self._reference(item_id)
+        if ref.get() is None:
             return Response(
-                {"error": f"No existe el registro {item_id}"},
+                {"error": f"No existe el registro {item_id}."},
                 status=status.HTTP_404_NOT_FOUND,
             )
-        requests.put(_item_url(item_id), json=request.data)
-        return Response({"id": item_id, **request.data}, status=status.HTTP_200_OK)
+        data = request.data.copy()
+        ref.set(data)
+        return Response({"id": item_id, **data}, status=status.HTTP_200_OK)
 
     def patch(self, request, item_id):
-        current = self._find(item_id)
+        ref = self._reference(item_id)
+        current = ref.get()
         if current is None:
             return Response(
-                {"error": f"No existe el registro {item_id}"},
+                {"error": f"No existe el registro {item_id}."},
                 status=status.HTTP_404_NOT_FOUND,
             )
-        requests.patch(_item_url(item_id), json=request.data)
-        return Response({"id": item_id, **current, **request.data}, status=status.HTTP_200_OK)
+        ref.update(dict(request.data))
+        return Response({"id": item_id, **ref.get()}, status=status.HTTP_200_OK)
 
     def delete(self, request, item_id):
-        if self._find(item_id) is None:
+        ref = self._reference(item_id)
+        if ref.get() is None:
             return Response(
-                {"error": f"No existe el registro {item_id}"},
+                {"error": f"No existe el registro {item_id}."},
                 status=status.HTTP_404_NOT_FOUND,
             )
-        requests.delete(_item_url(item_id))
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        ref.delete()
+        return Response(
+            {"message": f"Registro {item_id} eliminado."},
+            status=status.HTTP_200_OK,
+        )
