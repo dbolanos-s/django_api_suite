@@ -20,13 +20,13 @@ DEBUG = os.environ.get("DJANGO_DEBUG", "True") == "True"
 ALLOWED_HOSTS = [
     "127.0.0.1",
     "localhost",
-    ".github.dev",                     # Codespaces
-    "<USUARIO-PYTHONANYWHERE>.pythonanywhere.com",
+    ".github.dev",
+    "dbolanos.pythonanywhere.com",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://*.github.dev",
-    "https://<USUARIO-PYTHONANYWHERE>.pythonanywhere.com",
+    "https://dbolanos.pythonanywhere.com",
 ]
 
 INSTALLED_APPS = [
@@ -98,16 +98,19 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "static"),
 ]
 
-STATIC_ROOT = "assets/"
+STATIC_ROOT = os.path.join(BASE_DIR, "assets")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # --- Firebase Admin Python SDK -------------------------------------------
-# Coloque la ruta relativa al archivo con la clave privada
-FIREBASE_CREDENTIALS_PATH = credentials.Certificate("secrets/landing-key.json")
+FIREBASE_CREDENTIALS_FILE = BASE_DIR / "secrets" / "landing-key.json"
+FIREBASE_DATABASE_URL = "https://landing-2de01-default-rtdb.firebaseio.com/"
 
-# Inicialice la conexión con el Realtime Database con la clave privada y la URL
-if not firebase_admin._apps:
-    firebase_admin.initialize_app(FIREBASE_CREDENTIALS_PATH, {
-        "databaseURL": "https://landing-2de01-default-rtdb.firebaseio.com/"
-    })
+if FIREBASE_CREDENTIALS_FILE.exists() and not firebase_admin._apps:
+    try:
+        firebase_admin.initialize_app(
+            credentials.Certificate(str(FIREBASE_CREDENTIALS_FILE)),
+            {"databaseURL": FIREBASE_DATABASE_URL},
+        )
+    except Exception:
+        pass
