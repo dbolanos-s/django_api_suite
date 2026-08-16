@@ -104,7 +104,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # --- Firebase Admin Python SDK -------------------------------------------
 FIREBASE_CREDENTIALS_FILE = BASE_DIR / "secrets" / "landing-key.json"
-FIREBASE_DATABASE_URL = "https://landing-2de01-default-rtdb.firebaseio.com/"
+FIREBASE_DATABASE_URL = "https://landing-d64f4-default-rtdb.firebaseio.com/"
 
 if FIREBASE_CREDENTIALS_FILE.exists() and not firebase_admin._apps:
     try:
