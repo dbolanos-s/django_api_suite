@@ -4,6 +4,7 @@ Django settings for backend_data_server project.
 
 from pathlib import Path
 import os
+import logging
 
 import firebase_admin
 from firebase_admin import credentials
@@ -36,7 +37,6 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "firebase_admin",
     "rest_framework",
     "homepage",
     "demo_rest_api",
@@ -112,5 +112,5 @@ if FIREBASE_CREDENTIALS_FILE.exists() and not firebase_admin._apps:
             credentials.Certificate(str(FIREBASE_CREDENTIALS_FILE)),
             {"databaseURL": FIREBASE_DATABASE_URL},
         )
-    except Exception:
-        pass
+    except Exception as exc:
+        logging.exception("Firebase initialization failed: %s", exc)
