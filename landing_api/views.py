@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 
 class LandingAPI(APIView):
     name = "Landing API"
-    collection_name = "favoritos"
+    collection_name = "plato_favorito"
 
     @staticmethod
     def _firebase_error_response():
@@ -50,7 +50,7 @@ class LandingDetailAPI(APIView):
     """CRUD por elemento sobre la misma colección."""
 
     name = "Landing API - Item"
-    collection_name = "favoritos"
+    collection_name = "plato_favorito"
 
     @staticmethod
     def _firebase_error_response():
