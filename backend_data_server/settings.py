@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "homepage",
     "demo_rest_api",
     "landing_api",
+    "dashboard",
 ]
 
 MIDDLEWARE = [
@@ -114,3 +115,9 @@ if FIREBASE_CREDENTIALS_FILE.exists() and not firebase_admin._apps:
         )
     except Exception as exc:
         logging.exception("Firebase initialization failed: %s", exc)
+
+API_URL = "https://jsonplaceholder.typicode.com/posts"
+
+LOGIN_URL = "/dashboard/login/"
+LOGIN_REDIRECT_URL = "/dashboard/"
+LOGOUT_REDIRECT_URL = "/dashboard/login/"

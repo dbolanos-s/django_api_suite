@@ -1,0 +1,10 @@
+<header>
+    <h1>{{ title }}</h1>
+    {% if user.is_authenticated %}
+        <p>Bienvenido, {{ user.username }}</p>
+        <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button type="submit">Cerrar sesión</button>
+        </form>
+    {% endif %}
+</header>

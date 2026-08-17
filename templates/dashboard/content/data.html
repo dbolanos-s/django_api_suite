@@ -1,0 +1,8 @@
+<section>
+    <h2>Total de respuestas: {{ total_responses }}</h2>
+    <ul>
+        {% for post in posts %}
+            <li>{{ post.title }}</li>
+        {% endfor %}
+    </ul>
+</section>
