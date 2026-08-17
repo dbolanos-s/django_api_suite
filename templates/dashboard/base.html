@@ -4,6 +4,33 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{ title }}</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: system-ui, "Segoe UI", Roboto, sans-serif; background: #f4f6fb; color: #1f2937; }
+        header {
+            display: flex; align-items: center; justify-content: space-between;
+            background: #1e293b; color: #fff; padding: 16px 28px;
+        }
+        header h1 { font-size: 20px; font-weight: 700; }
+        .user-box { display: flex; align-items: center; gap: 14px; font-size: 14px; }
+        .user-box button {
+            background: #ef4444; color: #fff; border: none; padding: 8px 14px;
+            border-radius: 6px; cursor: pointer; font-size: 14px;
+        }
+        main { max-width: 960px; margin: 28px auto; padding: 0 20px; }
+        .cards { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 28px; }
+        .card {
+            background: #fff; border-radius: 12px; padding: 22px 26px; min-width: 220px;
+            box-shadow: 0 1px 3px rgba(0,0,0,.08);
+        }
+        .card .label { font-size: 14px; color: #6b7280; }
+        .card .value { font-size: 40px; font-weight: 800; color: #2563eb; margin-top: 6px; }
+        table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+        thead { background: #eef2ff; }
+        th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid #eef2f7; font-size: 14px; }
+        th { color: #4338ca; font-weight: 600; }
+        tbody tr:last-child td { border-bottom: none; }
+    </style>
 </head>
 <body>
     {% include "dashboard/partials/header.html" %}

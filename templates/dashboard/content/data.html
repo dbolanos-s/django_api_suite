@@ -1,8 +1,29 @@
 <section>
-    <h2>Total de respuestas: {{ total_responses }}</h2>
-    <ul>
-        {% for post in posts %}
-            <li>{{ post.title }}</li>
-        {% endfor %}
-    </ul>
+    <div class="cards">
+        <div class="card">
+            <div class="label">Total de respuestas</div>
+            <div class="value">{{ total_responses }}</div>
+        </div>
+        <div class="card">
+            <div class="label">Mostrando</div>
+            <div class="value">{{ posts|length }}</div>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Título</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for post in posts %}
+            <tr>
+                <td>{{ post.id }}</td>
+                <td>{{ post.title }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </section>
